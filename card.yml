@@ -1,0 +1,6 @@
+#Ajouter simplement comme dans l'exemple les cartes que vous voulez
+cards:
+  - 3060
+  - 3070
+  - 3080
+  - 3090
