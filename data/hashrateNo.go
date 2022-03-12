@@ -1,34 +1,17 @@
 package data
 
-var CardsResult *CardsHarvested
+var CardsJson []Card
 
-type CardsHarvested struct {
-	CardHarvested []CardHarvested
-}
-
-type CardHarvested struct {
-	Name       string `json:"card_name"`
-	DualCoin   []DualCoin
-	SingleCoin []SingleCoin
-}
-
-type DualCoin struct {
+type Card struct {
 	HashratePrimary float64 `json:"hashrate_primary"`
-	HashrateAlt     float64 `json:"hashrate_alt"`
-	CoinName        string  `json:"coin_name"`
-	UnitPrimary     string  `json:"primary_unit"`
-	UnitAlt         string  `json:"alt_unit"`
-	CoinPrimary     string  `json:"primary_coin"`
-	CoinAlt         string  `json:"alt_coin"`
-	Conso           int     `json:"conso"`
 	Income          float64 `json:"income"`
-}
-
-type SingleCoin struct {
+	HashrateAlt     float64 `json:"hashrate_alt,omitempty"`
 	CoinName        string  `json:"coin_name"`
-	HashratePrimary float64 `json:"hashrate_primary"`
-	UnitPrimary     string  `json:"primary_unit"`
+	Timestamp       string  `json:"@timestamp"`
+	Card            string  `json:"card"`
 	CoinPrimary     string  `json:"primary_coin"`
+	UnitPrimary     string  `json:"primary_unit"`
+	UnitAlt         string  `json:"alt_unit,omitempty"`
+	CoinAlt         string  `json:"alt_coin,omitempty"`
 	Conso           int     `json:"conso"`
-	Income          float64 `json:"income"`
 }

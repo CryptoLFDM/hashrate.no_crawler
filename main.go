@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gocolly/colly"
 	"hasrateNoCrawlerScrapper/config"
@@ -10,12 +9,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func DualType(e *colly.HTMLElement) {
 	var dual = regexp.MustCompile(`([a-zA-Z]{0,}?\+[a-zA-Z]{0,})([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/s)([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/s)([0-9]{0,})w([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,})([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/w)([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/w)\$([0-9]{0,}?\.[0-9]{0,})\$([0-9]{0,}?\.[0-9]{0,}) ([0-9]{0,}) ([a-zA-Z]{0,})([0-9]{0,}) ([a-zA-Z]{0,})`)
 	if dual.MatchString(e.Text) {
-		DualCrawled := data.DualCoin{}
+		DualCrawled := data.Card{}
 		coin := dual.ReplaceAllString(e.Text, `$1`)
 		coinsName := strings.Split(coin, "+")
 		DualCrawled.CoinPrimary = coinsName[0]
@@ -27,18 +27,16 @@ func DualType(e *colly.HTMLElement) {
 		DualCrawled.HashratePrimary, _ = strconv.ParseFloat(dual.ReplaceAllString(e.Text, `$2`), 64)
 		DualCrawled.UnitPrimary = dual.ReplaceAllString(e.Text, `$3`)
 		DualCrawled.UnitAlt = dual.ReplaceAllString(e.Text, `$5`)
-		for index, elem := range data.CardsResult.CardHarvested {
-			if elem.Name == e.Request.URL.Path[1:] {
-				data.CardsResult.CardHarvested[index].DualCoin = append(data.CardsResult.CardHarvested[index].DualCoin, DualCrawled)
-			}
-		}
+		DualCrawled.Card = e.Request.URL.Path[1:]
+		DualCrawled.Timestamp = time.Now().Format(time.RFC3339)
+		data.CardsJson = append(data.CardsJson, DualCrawled)
 	}
 }
 
 func Singletype(e *colly.HTMLElement) {
 	var single = regexp.MustCompile(`([a-zA-Z]{0,})([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/s)([0-9]{0,})w([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,})([0-9]{0,}?\.[0-9]{0,}) ([a-zA-Z]{0,}\/w)\$([0-9]{0,}?\.[0-9]{0,})\$([0-9]{0,}?\.[0-9]{0,}) ([0-9]{0,}) ([a-zA-Z]{0,})([0-9]{0,}) ([a-zA-Z]{0,})`)
 	if single.MatchString(e.Text) {
-		SingleCrawled := data.SingleCoin{}
+		SingleCrawled := data.Card{}
 		coin := single.ReplaceAllString(e.Text, `$1`)
 		SingleCrawled.CoinPrimary = coin
 		SingleCrawled.CoinName = coin
@@ -46,11 +44,9 @@ func Singletype(e *colly.HTMLElement) {
 		SingleCrawled.UnitPrimary = single.ReplaceAllString(e.Text, `$3`)
 		SingleCrawled.Conso, _ = strconv.Atoi(single.ReplaceAllString(e.Text, `$4`))
 		SingleCrawled.Income, _ = strconv.ParseFloat(single.ReplaceAllString(e.Text, `$9`), 64)
-		for index, elem := range data.CardsResult.CardHarvested {
-			if elem.Name == e.Request.URL.Path[1:] {
-				data.CardsResult.CardHarvested[index].SingleCoin = append(data.CardsResult.CardHarvested[index].SingleCoin, SingleCrawled)
-			}
-		}
+		SingleCrawled.Card = e.Request.URL.Path[1:]
+		SingleCrawled.Timestamp = time.Now().Format(time.RFC3339)
+		data.CardsJson = append(data.CardsJson, SingleCrawled)
 	}
 }
 
@@ -59,8 +55,7 @@ func DispatchType(e *colly.HTMLElement) {
 	Singletype(e)
 }
 
-func runCrawler() {
-	data.CardsResult = &data.CardsHarvested{}
+func RunCrawler() (int, string) {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.hashrate.no", "hashrate.no"),
 	)
@@ -71,23 +66,20 @@ func runCrawler() {
 		DispatchType(e)
 	})
 	c.OnRequest(func(r *colly.Request) {
-		log.Println("harvesting : ", r.URL.String())
+		log.Printf("harvesting : %s", r.URL.String())
 	})
 	c.OnScraped(func(s *colly.Response) {
-		log.Println("harvested : ", s.Request.URL.String())
+		log.Printf("harvested : %s", s.Request.URL.String())
 	})
 	for _, elem := range config.Cards.CardsList {
 		url := fmt.Sprintf("https://www.hashrate.no/%s", elem)
-		TmpCardHarvested := data.CardHarvested{}
-		TmpCardHarvested.Name = elem
-		data.CardsResult.CardHarvested = append(data.CardsResult.CardHarvested, TmpCardHarvested)
 		c.Visit(url)
 	}
+	return 200, "Card Stats harvested"
 }
 
 func main() {
 	config.LoadYamlConfig()
-	runCrawler()
-	JsonCardResult, _ := json.Marshal(data.CardsResult)
-	log.Println(string(JsonCardResult))
+	RunCrawler()
+	log.Println(data.CardsJson)
 }
